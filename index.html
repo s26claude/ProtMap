@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>In Silico Digestion Tool</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg:       #ffffff;
+  --panel:    #f8fafc;
+  --surface:  #f1f5f9;
+  --border:   #e2e8f0;
+  --border2:  #cbd5e1;
+  --text:     #1e293b;
+  --muted:    #64748b;
+  --dim:      #cbd5e1;
+
+  /* cleavage site palette — vivid but legible on white */
+  --c0: #dc2626;
+  --c1: #ea580c;
+  --c2: #ca8a04;
+  --c3: #16a34a;
+  --c4: #0891b2;
+  --c5: #4f46e5;
+  --c6: #a21caf;
+  --c7: #db2777;
+
+  --c0b: rgba(220,38,38,.12);
+  --c1b: rgba(234,88,12,.12);
+  --c2b: rgba(202,138,4,.10);
+  --c3b: rgba(22,163,74,.11);
+  --c4b: rgba(8,145,178,.11);
+  --c5b: rgba(79,70,229,.12);
+  --c6b: rgba(162,28,175,.11);
+  --c7b: rgba(219,39,119,.11);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.shell {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.topbar {
+  grid-column: 1 / -1;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+}
+.topbar-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+.topbar-logo span { color: #2563eb; }
+.topbar-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  border-left: 1px solid var(--border);
+  padding-left: 16px;
+  margin-left: 4px;
+}
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* ── Left Panel ── */
+.left {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.left-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* ── Right Panel ── */
+.right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.right-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+/* ── Section headers ── */
+.sec {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 18px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.sec:first-child { margin-top: 0; }
+
+/* ── Form Controls ── */
+label { font-size: 12px; font-weight: 500; display: block; margin-bottom: 4px; color: #475569; }
+input[type=text], input[type=number], textarea, select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  padding: 8px 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { border-color: #2563eb; }
+select option { background: var(--panel); }
+textarea { min-height: 110px; resize: vertical; line-height: 1.7; }
+.field { margin-bottom: 12px; }
+.f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.f3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.hint { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 7px; border: none;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  font-size: 12px; font-weight: 600; transition: all .15s;
+  white-space: nowrap;
+}
+.btn-cyan  { background: #2563eb; color: #fff; }
+.btn-cyan:hover  { background: #1d4ed8; }
+.btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: #2563eb; color: #2563eb; }
+.btn-red   { background: rgba(220,38,38,.1); color: #dc2626; border: 1px solid rgba(220,38,38,.3); }
+.btn-red:hover { background: rgba(220,38,38,.18); }
+.btn-xs { padding: 3px 9px; font-size: 11px; border-radius: 5px; }
+
+/* ── Enzyme Cards ── */
+.enz-list { display: flex; flex-direction: column; gap: 7px; }
+.enz-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  position: relative;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.enz-card:hover { border-color: var(--border2); }
+.enz-card.active { border-color: #2563eb; background: rgba(37,99,235,.05); }
+.enz-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.enz-name { font-size: 13px; font-weight: 600; flex: 1; }
+.enz-sites { display: flex; flex-wrap: wrap; gap: 4px; }
+.site-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px;
+  border: 1.5px solid;
+}
+.enz-remove {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 14px; line-height: 1;
+  transition: color .15s;
+}
+.enz-remove:hover { color: #dc2626; }
+.active-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #2563eb; flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(37,99,235,.5);
+}
+
+/* ── Add enzyme form ── */
+.add-enz-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.add-enz-form .form-title {
+  font-size: 12px; font-weight: 600; margin-bottom: 10px;
+  color: #2563eb;
+}
+
+/* Cleavage site rows inside add form */
+.site-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 110px 24px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.site-row label { margin: 0; font-size: 11px; }
+.color-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+}
+
+/* ── Stats Bar ── */
+.stats-bar {
+  display: flex; gap: 1px;
+  background: var(--border);
+  border-radius: 10px; overflow: hidden;
+  margin-bottom: 18px;
+}
+.stat {
+  flex: 1; background: var(--panel);
+  padding: 10px 0; text-align: center;
+}
+.stat .v {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px; font-weight: 700; color: #2563eb;
+  display: block;
+}
+.stat .l { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 2px; margin-bottom: 16px; background: var(--panel); border-radius: 9px; padding: 3px; width: fit-content; }
+.tab {
+  padding: 6px 16px; border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.tab.active { background: var(--surface); color: var(--text); }
+
+/* ── Coverage Map ── */
+.cov-wrap {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 2.4;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.cov-row { display: flex; align-items: center; }
+.cov-pos { color: var(--muted); font-size: 10px; min-width: 46px; flex-shrink: 0; text-align: right; padding-right: 10px; }
+.aa {
+  display: inline-block; width: 14px; text-align: center;
+  border-radius: 2px; cursor: default; transition: transform .1s;
+  position: relative;
+}
+.aa:hover { transform: scaleY(1.3); z-index: 2; }
+.aa-plain { color: #94a3b8; }
+.aa-covered { color: #475569; background: rgba(71,85,105,.08); }
+
+/* cleavage site coloring — set dynamically via inline style */
+.aa-cut { font-weight: 700; }
+
+/* ── Legend ── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 14px; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.leg { display: flex; align-items: center; gap: 5px; }
+.leg-swatch { width: 13px; height: 13px; border-radius: 3px; }
+
+/* ── Peptide Table ── */
+.ptable-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; }
+.ptable {
+  width: 100%; border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+}
+.ptable th {
+  background: var(--surface); color: var(--muted);
+  text-align: left; padding: 8px 12px;
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  position: sticky; top: 0;
+}
+.ptable td { padding: 6px 12px; border-top: 1px solid var(--border); }
+.ptable tr:hover td { background: var(--surface); }
+.ptable .base td { background: rgba(37,99,235,.03); }
+.miss { color: #ea580c; }
+.pep-seq {
+  font-weight: 500; letter-spacing: .04em;
+  max-width: 280px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* sequence inside peptide — colored cleavage aa */
+.aa-in-pep { font-weight: 700; }
+
+/* ── Chain tabs ── */
+.chain-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.chain-tab {
+  padding: 4px 12px; border-radius: 6px; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; transition: all .15s;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.chain-tab.act { color: var(--text); border-color: #2563eb; background: rgba(37,99,235,.08); }
+
+/* ── Coverage bar ── */
+.cov-bar-wrap { margin-bottom: 12px; }
+.cov-bar-bg { background: var(--dim); border-radius: 4px; height: 8px; overflow: hidden; }
+.cov-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#2563eb,#7c3aed); transition: width .5s ease; }
+.cov-label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+
+/* ── Alert ── */
+.alert { padding: 9px 13px; border-radius: 8px; font-size: 11.5px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+.alert-i { background: rgba(37,99,235,.07); border: 1px solid rgba(37,99,235,.2); color: #2563eb; }
+.alert-w { background: rgba(202,138,4,.07); border: 1px solid rgba(202,138,4,.2); color: #b45309; }
+
+/* ── Chain blocks in left panel ── */
+.chain-entry {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+  position: relative;
+}
+.chain-entry .ch-lbl {
+  font-size: 11px; font-weight: 600; color: #4f46e5;
+  font-family: 'JetBrains Mono', monospace; margin-bottom: 7px;
+}
+.chain-rm {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+.chain-rm:hover { color: #dc2626; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* tooltip */
+.aa[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #f8fafc;
+  font-size: 10px; padding: 3px 7px; border-radius: 5px;
+  white-space: nowrap; z-index: 99; pointer-events: none;
+  border: 1px solid #334155;
+}
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+.empty-state .big { font-size: 40px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-logo"><span>◈</span> ProtMap</div>
+    <div class="topbar-sub">In Silico Digestion Tool</div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-xs" onclick="exportResults()">⬇ Export</button>
+      <button class="btn btn-ghost btn-xs" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL -->
+  <aside class="left">
+    <div class="left-body">
+
+      <!-- Protein Chains -->
+      <div class="sec">Protein Chains</div>
+      <div id="chainList"></div>
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:4px" onclick="addChain()">+ Add Chain</button>
+
+      <div class="divider"></div>
+
+      <!-- Digestion Params -->
+      <div class="sec">Digestion Parameters</div>
+      <div class="f2">
+        <div class="field">
+          <label>Missed Cleavages</label>
+          <select id="mc">
+            <option value="0">0</option>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Min Length (aa)</label>
+          <input type="number" id="minLen" value="5" min="1" max="50"/>
+        </div>
+      </div>
+      <div class="f2">
+        <div class="field">
+          <label>Max Length (aa)</label>
+          <input type="number" id="maxLen" value="50" min="5" max="300"/>
+        </div>
+        <div class="field">
+          <label>Cols per Row</label>
+          <input type="number" id="cols" value="60" min="20" max="120"/>
+        </div>
+      </div>
+
+      <button class="btn btn-cyan" style="width:100%;margin-top:4px" onclick="runDigestion()">▶ Run Digestion</button>
+
+      <div class="divider"></div>
+
+      <!-- Enzymes -->
+      <div class="sec">Enzymes</div>
+      <div class="enz-list" id="enzList"></div>
+
+      <!-- Add Enzyme Form -->
+      <div class="add-enz-form" id="addEnzForm" style="margin-top:10px">
+        <div class="form-title">+ Define Enzyme</div>
+        <div class="field">
+          <label>Enzyme Name</label>
+          <input type="text" id="eName" placeholder="e.g. Trypsin/LysC, Glu-C, Elastase"/>
+        </div>
+
+        <label style="margin-bottom:6px">Cleavage Sites</label>
+        <div id="siteRows"></div>
+        <button class="btn btn-ghost btn-xs" onclick="addSiteRow()" style="margin-bottom:8px">+ Add Site</button>
+
+        <div class="field">
+          <label>Exclude if next residue is (optional)</label>
+          <input type="text" id="eNot" placeholder="e.g. P"/>
+          <div class="hint">Comma-separated. e.g. trypsin skips K/R before P</div>
+        </div>
+
+        <button class="btn btn-cyan" style="width:100%" onclick="saveEnzyme()">Add Enzyme</button>
+        <div id="enzErr" style="color:#dc2626;font-size:11px;margin-top:6px;display:none"></div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <main class="right">
+    <div class="right-body" id="rightBody">
+      <div class="empty-state">
+        <div class="big">🧬</div>
+        <div>Enter a sequence and enzyme on the left,<br>then click <strong>Run Digestion</strong></div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DEFAULT COLORS & COLOR UTILS
+// ═══════════════════════════════════════════════
+const DEFAULT_COLORS = [
+  '#dc2626','#2563eb','#16a34a','#ea580c',
+  '#9333ea','#0891b2','#ca8a04','#db2777',
+];
+
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  return { r:parseInt(hex.slice(0,2),16), g:parseInt(hex.slice(2,4),16), b:parseInt(hex.slice(4,6),16) };
+}
+function colorObj(hex) {
+  const {r,g,b} = hexToRgb(hex);
+  return { fg:hex, bg:`rgba(${r},${g},${b},.13)`, border:`rgba(${r},${g},${b},.45)` };
+}
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const ST = {
+  chains: [{ name:'Heavy Chain', seq:'' }, { name:'Light Chain', seq:'' }],
+  enzymes: [],
+  activeEnzyme: null,
+  activeChain: 0,
+  tab: 'map',
+  results: [],
+};
+
+// ═══════════════════════════════════════════════
+//  BUILT-IN ENZYMES  (sites store hex color directly)
+// ═══════════════════════════════════════════════
+const BUILTINS = [
+  {
+    name: 'Trypsin/LysC',
+    sites: [
+      { aa:'K', terminal:'C', color:'#dc2626' },
+      { aa:'R', terminal:'C', color:'#2563eb' },
+    ],
+    notBefore: ['P'],
+  },
+  {
+    name: 'Trypsin',
+    sites: [
+      { aa:'K', terminal:'C', color:'#dc2626' },
+      { aa:'R', terminal:'C', color:'#2563eb' },
+    ],
+    notBefore: ['P'],
+  },
+  {
+    name: 'Lys-C',
+    sites: [{ aa:'K', terminal:'C', color:'#dc2626' }],
+    notBefore: [],
+  },
+  {
+    name: 'Asp-N',
+    sites: [{ aa:'D', terminal:'N', color:'#16a34a' }],
+    notBefore: [],
+  },
+];
+
+// ═══════════════════════════════════════════════
+//  DIGESTION ENGINE
+// ═══════════════════════════════════════════════
+function buildCleaveAfter(enz) {
+  return enz.sites.filter(s => s.terminal === 'C').map(s => s.aa);
+}
+function buildCleaveBefore(enz) {
+  return enz.sites.filter(s => s.terminal === 'N').map(s => s.aa);
+}
+
+function findCuts(seq, enz) {
+  const after  = buildCleaveAfter(enz);
+  const before = buildCleaveBefore(enz);
+  const notB   = enz.notBefore || [];
+  const cuts = [];
+  for (let i = 0; i < seq.length - 1; i++) {
+    const aa = seq[i], nx = seq[i+1];
+    if (after.includes(aa) && !notB.includes(nx)) cuts.push(i);
+    if (before.includes(nx) && !notB.includes(nx)) cuts.push(i);
+  }
+  return [...new Set(cuts)].sort((a,b)=>a-b);
+}
+
+function doDigest(seq, enz, maxMissed, minLen, maxLen) {
+  seq = seq.replace(/[^A-Za-z]/g,'').toUpperCase();
+  if (!seq || !enz) return [];
+  const cuts = findCuts(seq, enz);
+  const pos = [-1, ...cuts, seq.length - 1];
+  const base = [];
+  for (let i = 0; i < pos.length-1; i++) {
+    const s = pos[i]+1, e = pos[i+1];
+    base.push({ seq: seq.slice(s,e+1), start:s+1, end:e+1, missed:0 });
+  }
+  const all = [...base];
+  for (let m = 1; m <= maxMissed; m++) {
+    for (let i = 0; i < base.length-m; i++) {
+      const combined = base.slice(i,i+m+1).map(p=>p.seq).join('');
+      all.push({ seq:combined, start:base[i].start, end:base[i+m].end, missed:m });
+    }
+  }
+  return all
+    .filter(p => p.seq.length>=minLen && p.seq.length<=maxLen)
+    .map(p => {
+      const mono = calcMonoMW(p.seq);
+      const z    = likelyCharge(p.seq);
+      const mz   = calcMZ(mono, z);
+      return { ...p, mw:mono, charge:z, mz };
+    })
+    .sort((a,b)=>a.start-b.start||a.missed-b.missed);
+}
+
+// Accurate monoisotopic residue masses (NIST values, Da)
+const AA_MONO = {
+  A:71.03711,  R:156.10111, N:114.04293, D:115.02694,
+  C:103.00919, E:129.04259, Q:128.05858, G:57.02146,
+  H:137.05891, I:113.08406, L:113.08406, K:128.09496,
+  M:131.04049, F:147.06841, P:97.05276,  S:87.03203,
+  T:101.04768, W:186.07931, Y:163.06333, V:99.06841,
+};
+const H2O_MONO = 18.01056; // monoisotopic water
+const PROTON   =  1.00728; // proton mass (Da)
+
+function calcMonoMW(seq) {
+  let m = H2O_MONO;
+  for (const a of seq) m += (AA_MONO[a] || 111.1);
+  return parseFloat(m.toFixed(4));
+}
+
+// Most likely charge: count basic sites (K,R=+1, H~+0.1) + N-term (+1)
+// ESI most likely z is capped by length/10
+function likelyCharge(seq) {
+  let raw = 1;
+  for (const a of seq) {
+    if (a === 'K' || a === 'R') raw += 1;
+    else if (a === 'H') raw += 0.1;
+  }
+  raw = Math.round(raw);
+  const byLen = Math.max(1, Math.round(seq.length / 10));
+  return Math.min(raw, byLen);
+}
+
+function calcMZ(monoMW, z) {
+  if (z < 1) z = 1;
+  return parseFloat(((monoMW + z * PROTON) / z).toFixed(4));
+}
+
+function calcCoverage(seq, peptides) {
+  const cov = new Set();
+  peptides.filter(p=>p.missed===0).forEach(p=>{ for(let i=p.start-1;i<p.end;i++) cov.add(i); });
+  return seq.length ? +(cov.size/seq.length*100).toFixed(1) : 0;
+}
+
+// ═══════════════════════════════════════════════
+//  CHAIN UI
+// ═══════════════════════════════════════════════
+function renderChainList() {
+  document.getElementById('chainList').innerHTML = ST.chains.map((c,i) => `
+    <div class="chain-entry" id="ce_${i}">
+      <div class="ch-lbl">Chain ${i+1}</div>
+      ${i>0?`<button class="chain-rm" onclick="removeChain(${i})">&#x2715;</button>`:''}
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="cname_${i}" value="${c.name}" placeholder="Heavy Chain, Light Chain..."/>
+      </div>
+      <div class="field">
+        <label>Sequence <span id="clen_${i}" style="color:var(--muted);font-size:10px">${c.seq?'('+c.seq.length+' aa)':''}</span></label>
+        <textarea id="cseq_${i}" oninput="liveLen(${i})" placeholder="Paste single-letter sequence...">${c.seq}</textarea>
+      </div>
+    </div>`).join('');
+}
+
+function liveLen(i) {
+  const el = document.getElementById('cseq_'+i);
+  const lenEl = document.getElementById('clen_'+i);
+  if (el && lenEl) lenEl.textContent = '(' + el.value.replace(/[^A-Za-z]/g,'').length + ' aa)';
+}
+
+function saveChains() {
+  ST.chains.forEach(function(_,i) {
+    var n = document.getElementById('cname_'+i);
+    var s = document.getElementById('cseq_'+i);
+    if (n) ST.chains[i].name = n.value.trim() || ('Chain '+(i+1));
+    if (s) ST.chains[i].seq  = s.value.replace(/[^A-Za-z]/g,'').toUpperCase();
+  });
+}
+
+function addChain() {
+  saveChains();
+  ST.chains.push({ name:'Chain '+(ST.chains.length+1), seq:'' });
+  renderChainList();
+}
+
+function removeChain(i) {
+  saveChains();
+  ST.chains.splice(i,1);
+  if (ST.activeChain >= ST.chains.length) ST.activeChain = 0;
+  renderChainList();
+}
+
+// ═══════════════════════════════════════════════
+//  ENZYME UI
+// ═══════════════════════════════════════════════
+function renderEnzList() {
+  const all = BUILTINS.concat(ST.enzymes);
+  document.getElementById('enzList').innerHTML = all.map(function(e,i) {
+    const isActive = ST.activeEnzyme === (e._key || e.name);
+    const isCustom = i >= BUILTINS.length;
+    const key = e._key || e.name;
+    return '<div class="enz-card '+(isActive?'active':'')+'" onclick="selectEnzyme(\''+key+'\')">'+
+      '<div class="enz-header">'+
+        (isActive?'<div class="active-dot"></div>':'')+
+        '<div class="enz-name">'+e.name+(isCustom?' <span style="font-size:10px;color:#4f46e5;font-family:JetBrains Mono,monospace">[custom]</span>':'')+
+        '</div>'+
+        (isCustom?'<button class="enz-remove" onclick="event.stopPropagation();removeEnzyme(\''+e._key+'\')">&#x2715;</button>':'')+
+      '</div>'+
+      '<div class="enz-sites">'+
+        e.sites.map(function(s){
+          const c = colorObj(s.color || '#64748b');
+          return '<span class="site-chip" style="color:'+c.fg+';background:'+c.bg+';border-color:'+c.border+'">'+
+            s.aa+' <span style="opacity:.6;font-weight:400">'+(s.terminal==='C'?'C-term':'N-term')+'</span></span>';
+        }).join('')+
+        (e.notBefore&&e.notBefore.length?'<span class="site-chip" style="color:#64748b;background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.3)">not&#x2192;'+e.notBefore.join(',')+'</span>':'')+
+      '</div></div>';
+  }).join('');
+}
+
+function selectEnzyme(key) { ST.activeEnzyme = key; renderEnzList(); }
+
+function removeEnzyme(key) {
+  ST.enzymes = ST.enzymes.filter(function(e){ return e._key !== key; });
+  if (ST.activeEnzyme === key) ST.activeEnzyme = null;
+  renderEnzList();
+}
+
+// ═══════════════════════════════════════════════
+//  SITE ROW UI — color picker per site
+// ═══════════════════════════════════════════════
+var _siteRowId = 0;
+
+function addSiteRow() {
+  const id = _siteRowId++;
+  const rowCount = document.querySelectorAll('.site-row').length;
+  const defHex = DEFAULT_COLORS[rowCount % DEFAULT_COLORS.length];
+  const row = document.createElement('div');
+  row.className = 'site-row';
+  row.id = 'sr_'+id;
+  row.style.cssText = 'display:grid;grid-template-columns:70px 1fr 36px 24px;gap:6px;align-items:center;margin-bottom:7px';
+  row.innerHTML =
+    '<input type="text" id="saa_'+id+'" placeholder="K" maxlength="4"'+
+    ' style="text-transform:uppercase;text-align:center;font-weight:700;font-size:13px;color:'+defHex+'"'+
+    ' oninput="this.value=this.value.toUpperCase()"/>'+
+    '<select id="sterm_'+id+'" style="font-size:11px">'+
+      '<option value="C">C-terminal (after)</option>'+
+      '<option value="N">N-terminal (before)</option>'+
+    '</select>'+
+    '<input type="color" id="scol_'+id+'" value="'+defHex+'"'+
+    ' title="Choose highlight color"'+
+    ' onchange="document.getElementById(\'saa_'+id+'\').style.color=this.value"'+
+    ' style="width:34px;height:30px;padding:2px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer"/>'+
+    '<button class="btn btn-red btn-xs" onclick="removeSiteRow(\'sr_'+id+'\')" style="padding:2px 5px;line-height:1">&#x2715;</button>';
+  document.getElementById('siteRows').appendChild(row);
+}
+
+function removeSiteRow(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function saveEnzyme() {
+  const name = document.getElementById('eName').value.trim();
+  const errEl = document.getElementById('enzErr');
+  if (!name) { errEl.textContent='Please enter an enzyme name.'; errEl.style.display='block'; return; }
+  const rows = document.querySelectorAll('.site-row');
+  const sites = [];
+  rows.forEach(function(row) {
+    const id = row.id.replace('sr_','');
+    const aaEl  = document.getElementById('saa_'+id);
+    const termEl= document.getElementById('sterm_'+id);
+    const colEl = document.getElementById('scol_'+id);
+    if (aaEl && termEl) {
+      const aas = aaEl.value.replace(/[^A-Za-z]/g,'').toUpperCase().split('').filter(Boolean);
+      const hex = colEl ? colEl.value : DEFAULT_COLORS[sites.length % DEFAULT_COLORS.length];
+      aas.forEach(function(aa){ sites.push({ aa:aa, terminal:termEl.value, color:hex }); });
+    }
+  });
+  if (!sites.length) { errEl.textContent='Add at least one cleavage site.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  const notBefore = document.getElementById('eNot').value.replace(/[^A-Za-z]/g,'').toUpperCase().split('').filter(Boolean);
+  const key = 'custom_'+name.replace(/\W+/g,'_').toLowerCase()+'_'+Date.now();
+  ST.enzymes.push({ _key:key, name:name, sites:sites, notBefore:notBefore });
+  ST.activeEnzyme = key;
+  document.getElementById('eName').value = '';
+  document.getElementById('eNot').value = '';
+  document.getElementById('siteRows').innerHTML = '';
+  _siteRowId = 0;
+  renderEnzList();
+}
+
+// ═══════════════════════════════════════════════
+//  RUN DIGESTION
+// ═══════════════════════════════════════════════
+function getActiveEnzyme() {
+  if (!ST.activeEnzyme) return null;
+  return BUILTINS.concat(ST.enzymes).find(function(e){ return (e._key||e.name)===ST.activeEnzyme; }) || null;
+}
+
+function runDigestion() {
+  saveChains();
+  const enz = getActiveEnzyme();
+  if (!enz) { alert('Please select an enzyme first.'); return; }
+  const mc     = parseInt(document.getElementById('mc').value)||0;
+  const minLen = parseInt(document.getElementById('minLen').value)||5;
+  const maxLen = parseInt(document.getElementById('maxLen').value)||50;
+  ST.results = ST.chains
+    .filter(function(c){ return c.seq.length > 0; })
+    .map(function(c) {
+      const seq  = c.seq.replace(/[^A-Za-z]/g,'').toUpperCase();
+      const peps = doDigest(seq, enz, mc, minLen, maxLen);
+      const cuts = findCuts(seq, enz);
+      const cov  = calcCoverage(seq, peps);
+      return { name:c.name, seq:seq, peps:peps, cuts:cuts, cov:cov };
+    });
+  ST.activeChain = 0;
+  renderRight();
+}
+
+// ═══════════════════════════════════════════════
+//  COLOR MAP  { aa -> colorObj }
+// ═══════════════════════════════════════════════
+function buildColorMap(enz) {
+  const map = {};
+  (enz.sites||[]).forEach(function(s){
+    if (!map[s.aa]) map[s.aa] = colorObj(s.color || '#dc2626');
+  });
+  return map;
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER RIGHT PANEL
+// ═══════════════════════════════════════════════
+function renderRight() {
+  const rb = document.getElementById('rightBody');
+  if (!ST.results.length) {
+    rb.innerHTML = '<div class="empty-state"><div class="big">&#x1F9EC;</div><div>Enter sequences and run digestion.</div></div>';
+    return;
+  }
+  const enz = getActiveEnzyme();
+  const colorMap = buildColorMap(enz);
+  const r = ST.results[ST.activeChain] || ST.results[0];
+  const totalPeps = r.peps.filter(function(p){return p.missed===0;}).length;
+  const totalMiss = r.peps.filter(function(p){return p.missed>0;}).length;
+
+  let html = '';
+
+  if (ST.results.length > 1) {
+    html += '<div class="chain-tabs">' +
+      ST.results.map(function(res,i){
+        return '<div class="chain-tab '+(i===ST.activeChain?'act':'')+'" onclick="switchChain('+i+')">'+res.name+'</div>';
+      }).join('') + '</div>';
+  }
+
+  html += '<div class="stats-bar">'+
+    '<div class="stat"><span class="v">'+r.seq.length+'</span><span class="l">Total aa</span></div>'+
+    '<div class="stat"><span class="v">'+r.cov+'%</span><span class="l">Coverage</span></div>'+
+    '<div class="stat"><span class="v">'+r.cuts.length+'</span><span class="l">Cleavage Sites</span></div>'+
+    '<div class="stat"><span class="v">'+totalPeps+'</span><span class="l">Unique Peptides</span></div>'+
+    '<div class="stat"><span class="v">'+totalMiss+'</span><span class="l">w/ Missed Clv.</span></div>'+
+  '</div>';
+
+  html += '<div class="cov-bar-wrap">'+
+    '<div class="cov-label">Sequence Coverage &#8212; '+enz.name+'</div>'+
+    '<div class="cov-bar-bg"><div class="cov-bar-fill" style="width:'+r.cov+'%"></div></div>'+
+  '</div>';
+
+  // Legend
+  html += '<div class="legend">';
+  enz.sites.forEach(function(s){
+    const c = colorObj(s.color||'#64748b');
+    html += '<div class="leg"><div class="leg-swatch" style="background:'+c.bg+';border:1.5px solid '+c.border+'"></div>'+
+      '<span style="color:'+c.fg+';font-weight:700">'+s.aa+'</span>'+
+      '<span style="color:var(--muted)"> ('+(s.terminal==='C'?'cleave after':'cleave before')+')</span></div>';
+  });
+  html += '<div class="leg"><div class="leg-swatch" style="background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.3)"></div><span style="color:#64748b">Covered aa</span></div>';
+  html += '<div class="leg"><div class="leg-swatch" style="background:#fff;border:1px solid #cbd5e1"></div><span style="color:var(--muted)">Not covered</span></div>';
+  html += '</div>';
+
+  // Tab bar + export buttons
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
+    '<div class="tabs" style="margin-bottom:0">'+
+      '<div class="tab '+(ST.tab==='map'?'active':'')+'" onclick="switchTab(\'map\')">Coverage Map</div>'+
+      '<div class="tab '+(ST.tab==='table'?'active':'')+'" onclick="switchTab(\'table\')">Peptide Table</div>'+
+    '</div>'+
+    (ST.tab==='map'?'<button class="btn btn-ghost btn-xs" onclick="exportCoverageMap()">&#x1F5BC; Export Map (PNG)</button>':'')+
+    '<button class="btn btn-ghost btn-xs" onclick="exportResults()">&#x2B07; Export Table (.txt)</button>'+
+  '</div>';
+
+  if (ST.tab === 'map') {
+    html += buildCovMap(r.seq, r.peps, r.cuts, enz, colorMap);
+  } else {
+    html += buildPepTable(r.peps, enz, colorMap);
+  }
+  rb.innerHTML = html;
+}
+
+function switchChain(i) { ST.activeChain = i; renderRight(); }
+function switchTab(t)   { ST.tab = t;          renderRight(); }
+
+// ═══════════════════════════════════════════════
+//  COVERAGE MAP (HTML)
+// ═══════════════════════════════════════════════
+function buildCovMap(seq, peptides, cuts, enz, colorMap) {
+  const covered = new Set();
+  peptides.filter(function(p){return p.missed===0;}).forEach(function(p){
+    for(let i=p.start-1;i<p.end;i++) covered.add(i);
+  });
+  const afterSet  = new Set(buildCleaveAfter(enz));
+  const beforeSet = new Set(buildCleaveBefore(enz));
+  const notB      = new Set(enz.notBefore||[]);
+  const COLS      = parseInt(document.getElementById('cols').value)||60;
+
+  let html = '<div class="cov-wrap" id="covMapEl">';
+  for (let row=0; row<seq.length; row+=COLS) {
+    html += '<div class="cov-row"><span class="cov-pos">'+(row+1)+'</span>';
+    for (let i=row; i<Math.min(row+COLS,seq.length); i++) {
+      const aa = seq[i];
+      const isCov = covered.has(i);
+      const color = colorMap[aa];
+      let isRealCut = false;
+      if (color) {
+        if (afterSet.has(aa) && i < seq.length-1 && !notB.has(seq[i+1])) isRealCut = true;
+        if (afterSet.has(aa) && i === seq.length-1) isRealCut = true;
+        if (beforeSet.has(aa) && i > 0 && !notB.has(aa)) isRealCut = true;
+      }
+      if (isRealCut && color) {
+        html += '<span class="aa aa-cut" data-tip="Pos '+(i+1)+': '+aa+' [cleavage site]"'+
+          ' style="color:'+color.fg+';background:'+color.bg+';border-radius:3px;border-bottom:2.5px solid '+color.fg+'">'+aa+'</span>';
+      } else {
+        html += '<span class="aa '+(isCov?'aa-covered':'aa-plain')+'" data-tip="Pos '+(i+1)+': '+aa+(isRealCut?'':color&&!isRealCut?' [blocked]':'')+'">'+ aa+'</span>';
+      }
+    }
+    html += '</div>';
+  }
+  return html + '</div>';
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORT COVERAGE MAP → PNG via Canvas
+// ═══════════════════════════════════════════════
+function exportCoverageMap() {
+  const enz = getActiveEnzyme();
+  if (!enz || !ST.results.length) { alert('Run a digestion first.'); return; }
+  const r = ST.results[ST.activeChain] || ST.results[0];
+  const seq = r.seq;
+  const colorMap = buildColorMap(enz);
+  const afterSet  = new Set(buildCleaveAfter(enz));
+  const beforeSet = new Set(buildCleaveBefore(enz));
+  const notB      = new Set(enz.notBefore||[]);
+  const covered   = new Set();
+  r.peps.filter(function(p){return p.missed===0;}).forEach(function(p){
+    for(let i=p.start-1;i<p.end;i++) covered.add(i);
+  });
+
+  const COLS   = parseInt(document.getElementById('cols').value)||60;
+  const ROWS   = Math.ceil(seq.length / COLS);
+  const CELL_W = 13;
+  const CELL_H = 22;
+  const POS_W  = 50;
+  const PAD    = 18;
+  const HEADER = 68;
+  const FOOTER = 28;
+
+  const W = POS_W + COLS * CELL_W + PAD * 2;
+  const H = HEADER + ROWS * CELL_H + FOOTER + PAD;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = W * 2;
+  canvas.height = H * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+
+  // White background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText('Coverage Map  \u2014  ' + r.name, PAD, PAD + 14);
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText('Enzyme: ' + enz.name + '   Coverage: ' + r.cov + '%   Unique peptides: ' + r.peps.filter(function(p){return p.missed===0;}).length, PAD, PAD + 30);
+
+  // Legend row
+  let legX = PAD;
+  const legY = PAD + 44;
+  enz.sites.forEach(function(s) {
+    const c = colorObj(s.color||'#dc2626');
+    const rgb = hexToRgb(s.color||'#dc2626');
+    ctx.fillStyle = 'rgba('+rgb.r+','+rgb.g+','+rgb.b+',.13)';
+    ctx.strokeStyle = s.color||'#dc2626';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(legX, legY, 12, 12, 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = s.color||'#dc2626';
+    ctx.font = 'bold 10px monospace';
+    const w = ctx.measureText(s.aa).width;
+    ctx.fillText(s.aa, legX + 16, legY + 10);
+    legX += 20 + w + 10;
+  });
+  // covered swatch
+  ctx.fillStyle = 'rgba(100,116,139,.1)';
+  ctx.strokeStyle = 'rgba(100,116,139,.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(legX, legY, 12, 12, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#475569';
+  ctx.font = '10px monospace';
+  ctx.fillText('covered', legX + 16, legY + 10);
+
+  // Draw sequence rows
+  for (let row = 0; row < ROWS; row++) {
+    const y = HEADER + row * CELL_H;
+    // position number
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(row * COLS + 1), PAD + POS_W - 4, y + CELL_H * 0.72);
+
+    ctx.textAlign = 'center';
+    for (let col = 0; col < COLS; col++) {
+      const idx = row * COLS + col;
+      if (idx >= seq.length) break;
+      const aa = seq[idx];
+      const x = PAD + POS_W + col * CELL_W + CELL_W / 2;
+      const isCov = covered.has(idx);
+      const color = colorMap[aa];
+
+      let isRealCut = false;
+      if (color) {
+        if (afterSet.has(aa) && idx < seq.length-1 && !notB.has(seq[idx+1])) isRealCut = true;
+        if (afterSet.has(aa) && idx === seq.length-1) isRealCut = true;
+        if (beforeSet.has(aa) && idx > 0 && !notB.has(aa)) isRealCut = true;
+      }
+
+      if (isRealCut && color) {
+        const rgb = hexToRgb(color.fg);
+        ctx.fillStyle = 'rgba('+rgb.r+','+rgb.g+','+rgb.b+',.13)';
+        ctx.fillRect(x - CELL_W/2 + 1, y + 2, CELL_W - 2, CELL_H - 4);
+        ctx.strokeStyle = color.fg;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - CELL_W/2 + 1, y + CELL_H - 3);
+        ctx.lineTo(x + CELL_W/2 - 1, y + CELL_H - 3);
+        ctx.stroke();
+        ctx.fillStyle = color.fg;
+        ctx.font = 'bold '+(CELL_H * 0.58)+'px monospace';
+        ctx.fillText(aa, x, y + CELL_H * 0.72);
+      } else if (isCov) {
+        ctx.fillStyle = 'rgba(100,116,139,.1)';
+        ctx.fillRect(x - CELL_W/2 + 1, y + 2, CELL_W - 2, CELL_H - 4);
+        ctx.fillStyle = '#475569';
+        ctx.font = (CELL_H * 0.58)+'px monospace';
+        ctx.fillText(aa, x, y + CELL_H * 0.72);
+      } else {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = (CELL_H * 0.58)+'px monospace';
+        ctx.fillText(aa, x, y + CELL_H * 0.72);
+      }
+    }
+  }
+
+  // Footer
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '8px monospace';
+  ctx.fillText('ProtMap In Silico Digestion Tool  |  ' + new Date().toLocaleDateString(), PAD, H - 8);
+
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'coverage_map_' + r.name.replace(/\s+/g,'_') + '.png';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════
+//  PEPTIDE TABLE  (mono MW 4dp, m/z 4dp)
+// ═══════════════════════════════════════════════
+function buildPepTable(peptides, enz, colorMap) {
+  const afterSet  = new Set(buildCleaveAfter(enz));
+  const beforeSet = new Set(buildCleaveBefore(enz));
+
+  function colorSeq(seq) {
+    return seq.split('').map(function(aa){
+      const c = colorMap[aa];
+      if (c && (afterSet.has(aa) || beforeSet.has(aa))) {
+        return '<span class="aa-in-pep" style="color:'+c.fg+'">'+aa+'</span>';
+      }
+      return aa;
+    }).join('');
+  }
+
+  const shown = peptides.slice(0, 300);
+  return '<div class="ptable-wrap"><table class="ptable">'+
+    '<thead><tr>'+
+      '<th>#</th><th>Start</th><th>End</th><th>Len</th>'+
+      '<th>Sequence</th>'+
+      '<th>Mono MW (Da)</th>'+
+      '<th>z</th>'+
+      '<th>m/z</th>'+
+      '<th>Missed</th>'+
+    '</tr></thead>'+
+    '<tbody>'+
+    shown.map(function(p,i){
+      return '<tr class="'+(p.missed===0?'base':'')+'">'+
+        '<td>'+(i+1)+'</td>'+
+        '<td>'+p.start+'</td>'+
+        '<td>'+p.end+'</td>'+
+        '<td>'+p.seq.length+'</td>'+
+        '<td class="pep-seq" title="'+p.seq+'">'+colorSeq(p.seq)+'</td>'+
+        '<td>'+p.mw.toFixed(4)+'</td>'+
+        '<td style="color:#4f46e5;font-weight:600">'+p.charge+'+</td>'+
+        '<td style="color:#0891b2;font-weight:600">'+p.mz.toFixed(4)+'</td>'+
+        '<td class="'+(p.missed>0?'miss':'')+'">'+p.missed+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table>'+
+    (peptides.length>300?'<div style="text-align:center;padding:10px;font-size:11px;color:var(--muted);font-family:JetBrains Mono,monospace">Showing 300 of '+peptides.length+' peptides</div>':'')+
+  '</div>';
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORT TABLE (.txt)
+// ═══════════════════════════════════════════════
+function exportResults() {
+  if (!ST.results.length) { alert('Run a digestion first.'); return; }
+  const enz = getActiveEnzyme();
+  let out = 'IN SILICO DIGESTION RESULTS\n' + '\u2550'.repeat(72) + '\n';
+  out += 'Enzyme: ' + enz.name + '\n';
+  out += 'Sites: ' + enz.sites.map(function(s){return s.aa+' ('+( s.terminal==='C'?'C-term':'N-term')+', color:'+s.color+')';}).join(', ') + '\n';
+  if (enz.notBefore&&enz.notBefore.length) out += 'Not before: '+enz.notBefore.join(',')+'\n';
+  out += 'Mass type: Monoisotopic (NIST) | m/z: most likely ESI charge state\n\n';
+  ST.results.forEach(function(r) {
+    const base = r.peps.filter(function(p){return p.missed===0;});
+    out += r.name + ' (' + r.seq.length + ' aa)\n';
+    out += '  Coverage: '+r.cov+'%  |  Cleavage sites: '+r.cuts.length+'  |  Unique peptides: '+base.length+'\n\n';
+    out += '  ' + '#'.padEnd(5) + 'Start'.padEnd(8) + 'End'.padEnd(8) + 'Len'.padEnd(6) + 'Missed'.padEnd(9) + 'Mono MW (Da)'.padEnd(17) + 'z'.padEnd(5) + 'm/z'.padEnd(15) + 'Sequence\n';
+    out += '  ' + '\u2500'.repeat(100) + '\n';
+    r.peps.forEach(function(p,i){
+      out += '  ' + String(i+1).padEnd(5) + String(p.start).padEnd(8) + String(p.end).padEnd(8) + String(p.seq.length).padEnd(6) + String(p.missed).padEnd(9) + p.mw.toFixed(4).padEnd(17) + String(p.charge+'+').padEnd(5) + p.mz.toFixed(4).padEnd(15) + p.seq + '\n';
+    });
+    out += '\n';
+  });
+  const blob = new Blob([out], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='insilico_digestion.txt';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════
+function resetAll() {
+  if (!confirm('Reset everything?')) return;
+  ST.chains = [{name:'Heavy Chain',seq:''},{name:'Light Chain',seq:''}];
+  ST.enzymes = []; ST.activeEnzyme = null; ST.results = []; ST.activeChain = 0;
+  renderChainList(); renderEnzList();
+  document.getElementById('rightBody').innerHTML =
+    '<div class="empty-state"><div class="big">&#x1F9EC;</div><div>Enter a sequence and enzyme on the left,<br>then click <strong>Run Digestion</strong></div></div>';
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+renderChainList();
+renderEnzList();
+addSiteRow();
+ST.activeEnzyme = 'Trypsin/LysC';
+renderEnzList();
+</script>
+</body>
+</html>
